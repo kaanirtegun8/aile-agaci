@@ -3,16 +3,18 @@ import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEma
 import { auth } from '../config/firebase';
 import { router } from 'expo-router';
 
-type AuthContextType = {
+interface AuthContextType {
   user: User | null;
+  userData: any;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-};
+}
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  userData: null,
   loading: true,
   signIn: async () => {},
   signUp: async () => {},
@@ -66,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, userData: null, loading, signIn, signUp, signOut }}>
       {!loading && children}
     </AuthContext.Provider>
   );

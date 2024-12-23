@@ -1,18 +1,10 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import FamilyTree  from '../components/FamilyTree';
+import { View } from 'react-native';
+import FamilyTree from '../components/FamilyTree';
 
-export default function HomeScreen() {
+export default function IndexScreen() {
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1 }}>
       <FamilyTree />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-});
