@@ -92,16 +92,16 @@ export default function MemoryDetail() {
                 initialRegion={{
                   latitude: memory.location.latitude,
                   longitude: memory.location.longitude,
-                  latitudeDelta: Platform.select({ ios: 0.002, android: 0.005 }),
-                  longitudeDelta: Platform.select({ ios: 0.002, android: 0.005 }),
+                  latitudeDelta: Platform.select({ ios: 0.002, android: 0.005 }) || 0.002,
+                  longitudeDelta: Platform.select({ ios: 0.002, android: 0.005 }) || 0.002,
                 }}
                 scrollEnabled={false}
                 zoomEnabled={false}
                 pitchEnabled={false}
                 rotateEnabled={false}
                 moveOnMarkerPress={false}
-                minZoomLevel={Platform.select({ ios: 15, android: 17 })}
-                maxZoomLevel={Platform.select({ ios: 20, android: 20 })}
+                minZoomLevel={Platform.select({ ios: 15, android: 17 }) || 15}
+                maxZoomLevel={Platform.select({ ios: 20, android: 20 }) || 20}
                 mapType={Platform.select({ ios: 'standard', android: 'standard' })}
                 camera={Platform.OS === 'android' ? {
                   center: {
