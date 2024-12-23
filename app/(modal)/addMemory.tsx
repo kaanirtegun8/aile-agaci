@@ -8,12 +8,15 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
-  ScrollView
+  ScrollView,
+  Modal
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Memory } from '../types/memories';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { formatDateToTurkish } from '../utils/date-utils';
 
 export default function AddMemoryModal() {
   const params = useLocalSearchParams();
@@ -21,6 +24,22 @@ export default function AddMemoryModal() {
   
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [memoryDate, setMemoryDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    
+    if (selectedDate) {
+      setMemoryDate(selectedDate);
+    }
+  };
+
+  const handleConfirmDate = () => {
+    setShowDatePicker(false);
+  };
 
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
@@ -37,7 +56,7 @@ export default function AddMemoryModal() {
           id: Date.now().toString(),
           title: title.trim(),
           content: content.trim(),
-          createdAt: new Date(),
+          memoryDate: memoryDate.getTime(),
           relationId
         };
 
@@ -75,6 +94,58 @@ export default function AddMemoryModal() {
             value={title}
             onChangeText={setTitle}
           />
+
+          <TouchableOpacity 
+            style={styles.dateButton}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={styles.dateButtonLabel}>Anı Tarihi</Text>
+            <Text style={styles.dateText}>
+              {formatDateToTurkish(memoryDate)}
+            </Text>
+          </TouchableOpacity>
+
+          {Platform.OS === 'ios' ? (
+            <Modal
+              animationType="slide"
+              transparent={true}
+              visible={showDatePicker}
+              onRequestClose={() => setShowDatePicker(false)}
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                  <View style={styles.datePickerHeader}>
+                    <TouchableOpacity 
+                      style={styles.datePickerButton} 
+                      onPress={handleConfirmDate}
+                    >
+                      <Text style={styles.datePickerButtonText}>Tamam</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={memoryDate}
+                    mode="date"
+                    display="spinner"
+                    onChange={onDateChange}
+                    maximumDate={new Date()}
+                    locale="tr-TR"
+                  />
+                </View>
+              </View>
+            </Modal>
+          ) : (
+            showDatePicker && (
+              <DateTimePicker
+                value={memoryDate}
+                mode="date"
+                display="default"
+                onChange={onDateChange}
+                maximumDate={new Date()}
+                locale="tr-TR"
+              />
+            )
+          )}
+
           <TextInput
             style={styles.contentInput}
             placeholder="Anınızı yazın..."
@@ -162,5 +233,58 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  dateButton: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  dateButtonLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  datePickerButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 8,
+    backgroundColor: '#f8f8f8',
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    marginBottom: 16,
+  },
+  datePickerButton: {
+    padding: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  datePickerButtonText: {
+    color: '#4A90E2',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 20,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
 }); 

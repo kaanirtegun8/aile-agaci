@@ -2,7 +2,7 @@ export interface Memory {
   id: string;
   title: string;
   content: string;
-  createdAt: Date;
+  memoryDate: number;
   relationId: string;
 }
 

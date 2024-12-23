@@ -60,11 +60,17 @@ export default function MemoryDetail() {
     );
   };
 
-  const formatDate = (date: Date) => {
-    if (!date) return '';
+  const formatDate = (timestamp: number) => {
+    if (!timestamp) return '';
     try {
-      return new Date(date).toLocaleDateString('tr-TR');
+      const date = new Date(timestamp);
+      return date.toLocaleDateString('tr-TR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
     } catch (error) {
+      console.error('Tarih formatı hatası:', error);
       return '';
     }
   };
@@ -77,11 +83,11 @@ export default function MemoryDetail() {
         <Text style={styles.title}>{memory.title}</Text>
         <Text style={styles.content}>{memory.content}</Text>
         
-        {memory.createdAt && (
+        <View style={styles.dateContainer}>
           <Text style={styles.date}>
-            Tarih: {formatDate(memory.createdAt)}
+            Tarih: {formatDate(memory.memoryDate)}
           </Text>
-        )}
+        </View>
       </ScrollView>
 
       <View style={styles.bottomContainer}>
@@ -117,8 +123,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   date: {
+    fontSize: 16,
     color: '#666',
-    marginTop: 16,
   },
   bottomContainer: {
     padding: 16,
@@ -135,5 +141,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  dateContainer: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 }); 

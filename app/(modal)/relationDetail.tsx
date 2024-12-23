@@ -21,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../config/firebase';
 import { Memory } from '../types/memories';
+import { formatDate } from '../utils/date-utils';
 
 interface Note {
   id: string;
@@ -440,7 +441,7 @@ export default function RelationDetailModal() {
                           >
                             <Text style={styles.memoryTitle}>{memory.title}</Text>
                             <Text style={styles.memoryDate}>
-                              {new Date(memory.createdAt).toLocaleDateString('tr-TR')}
+                              {formatDate(memory.memoryDate)}
                             </Text>
                           </TouchableOpacity>
                         ))
