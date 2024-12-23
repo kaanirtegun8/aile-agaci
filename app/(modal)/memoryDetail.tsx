@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform, SafeAreaView } from 'react-native';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { doc, deleteDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useState, useEffect } from 'react';
 import { Memory } from '../types/memories';
+import MapView, { Marker } from 'react-native-maps';
 
 export default function MemoryDetail() {
   const params = useLocalSearchParams();
@@ -76,33 +77,80 @@ export default function MemoryDetail() {
   };
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: memory.title }} />
-      
-      <ScrollView style={styles.scrollContainer}>
-        <Text style={styles.title}>{memory.title}</Text>
-        <Text style={styles.content}>{memory.content}</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Stack.Screen options={{ title: memory.title }} />
         
-        <View style={styles.dateContainer}>
-          <Text style={styles.date}>
-            Tarih: {formatDate(memory.memoryDate)}
-          </Text>
-        </View>
-      </ScrollView>
+        <ScrollView style={styles.scrollContainer}>
+          <Text style={styles.title}>{memory.title}</Text>
+          <Text style={styles.content}>{memory.content}</Text>
+          
+          {memory.location && (
+            <View style={styles.mapContainer}>
+              <MapView
+                style={styles.map}
+                initialRegion={{
+                  latitude: memory.location.latitude,
+                  longitude: memory.location.longitude,
+                  latitudeDelta: Platform.select({ ios: 0.002, android: 0.005 }),
+                  longitudeDelta: Platform.select({ ios: 0.002, android: 0.005 }),
+                }}
+                scrollEnabled={false}
+                zoomEnabled={false}
+                pitchEnabled={false}
+                rotateEnabled={false}
+                moveOnMarkerPress={false}
+                minZoomLevel={Platform.select({ ios: 15, android: 17 })}
+                maxZoomLevel={Platform.select({ ios: 20, android: 20 })}
+                mapType={Platform.select({ ios: 'standard', android: 'standard' })}
+                camera={Platform.OS === 'android' ? {
+                  center: {
+                    latitude: memory.location.latitude,
+                    longitude: memory.location.longitude,
+                  },
+                  pitch: 0,
+                  heading: 0,
+                  altitude: 1000,
+                  zoom: 17,
+                } : undefined}
+              >
+                <Marker
+                  coordinate={{
+                    latitude: memory.location.latitude,
+                    longitude: memory.location.longitude,
+                  }}
+                  title={memory.location.name}
+                />
+              </MapView>
+              <Text style={styles.locationName}>{memory.location.name}</Text>
+            </View>
+          )}
 
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity 
-          style={styles.deleteButton} 
-          onPress={handleDelete}
-        >
-          <Text style={styles.deleteButtonText}>Anıyı Sil</Text>
-        </TouchableOpacity>
+          <View style={styles.dateContainer}>
+            <Text style={styles.date}>
+              Tarih: {formatDate(memory.memoryDate)}
+            </Text>
+          </View>
+        </ScrollView>
+
+        <View style={styles.bottomContainer}>
+          <TouchableOpacity 
+            style={styles.deleteButton} 
+            onPress={handleDelete}
+          >
+            <Text style={styles.deleteButtonText}>Anıyı Sil</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -128,8 +176,10 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 0 : 16,
     borderTopWidth: 1,
     borderTopColor: '#eee',
+    backgroundColor: '#fff',
   },
   deleteButton: {
     backgroundColor: '#FF3B30',
@@ -149,5 +199,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  mapContainer: {
+    marginTop: 16,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  map: {
+    height: 200,
+    width: '100%',
+  },
+  locationName: {
+    padding: 12,
+    fontSize: 16,
+    color: '#666',
   },
 }); 

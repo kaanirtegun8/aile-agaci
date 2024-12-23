@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,14 +9,17 @@ import {
   Platform,
   KeyboardAvoidingView,
   ScrollView,
-  Modal
+  Modal,
+  SafeAreaView
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Memory } from '../types/memories';
+import { Memory, MemoryLocation } from '../types/memories';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { formatDateToTurkish } from '../utils/date-utils';
+import MapView, { Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
 
 export default function AddMemoryModal() {
   const params = useLocalSearchParams();
@@ -26,6 +29,29 @@ export default function AddMemoryModal() {
   const [content, setContent] = useState('');
   const [memoryDate, setMemoryDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<MemoryLocation | null>(null);
+  const [region, setRegion] = useState({
+    latitude: 41.0082,
+    longitude: 28.9784,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({});
+        setRegion({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        });
+      }
+    })();
+  }, []);
 
   const onDateChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
@@ -57,7 +83,8 @@ export default function AddMemoryModal() {
           title: title.trim(),
           content: content.trim(),
           memoryDate: memoryDate.getTime(),
-          relationId
+          relationId,
+          location: selectedLocation || undefined,
         };
 
         const currentMemories = relationDoc.data().memories || [];
@@ -78,6 +105,60 @@ export default function AddMemoryModal() {
     } catch (error) {
       console.error('Anı ekleme hatası:', error);
       Alert.alert('Hata', 'Anı eklenirken bir hata oluştu');
+    }
+  };
+
+  const searchLocation = async (searchText: string) => {
+    try {
+      const fullSearchText = `${searchText}, Turkey`;
+      const results = await Location.geocodeAsync(fullSearchText);
+      
+      if (results.length > 0) {
+        const { latitude, longitude } = results[0];
+        
+        // Harita bölgesini güncelle
+        const newRegion = {
+          latitude,
+          longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        };
+        
+        setRegion(newRegion);
+        setSelectedLocation({
+          latitude,
+          longitude,
+          name: searchText
+        });
+
+        // Bulunan konumun adresini al
+        try {
+          const reverseResults = await Location.reverseGeocodeAsync({
+            latitude,
+            longitude
+          });
+          if (reverseResults.length > 0) {
+            const address = reverseResults[0];
+            const locationName = [
+              address.street,
+              address.district,
+              address.subregion,
+              address.city
+            ].filter(Boolean).join(', ');
+            
+            setSelectedLocation(prev => ({
+              ...prev!,
+              name: locationName
+            }));
+          }
+        } catch (error) {
+          console.error('Adres çözümleme hatası:', error);
+        }
+      } else {
+        Alert.alert('Hata', 'Konum bulunamadı');
+      }
+    } catch (error) {
+      Alert.alert('Hata', 'Konum araması başarısız oldu');
     }
   };
 
@@ -145,6 +226,93 @@ export default function AddMemoryModal() {
               />
             )
           )}
+
+          <TouchableOpacity 
+            style={styles.locationButton}
+            onPress={() => setShowLocationPicker(true)}
+          >
+            <Text style={styles.locationButtonLabel}>Konum Ekle</Text>
+            {selectedLocation ? (
+              <Text style={styles.locationText}>{selectedLocation.name}</Text>
+            ) : (
+              <Text style={styles.locationPlaceholder}>Konum se��ilmedi</Text>
+            )}
+          </TouchableOpacity>
+
+          <Modal
+            visible={showLocationPicker}
+            animationType="slide"
+            onRequestClose={() => setShowLocationPicker(false)}
+          >
+            <SafeAreaView style={styles.locationPickerContainer}>
+              <View style={styles.locationPickerHeader}>
+                <Text style={styles.locationPickerTitle}>Konum Seç</Text>
+                <TouchableOpacity 
+                  style={styles.closeButton}
+                  onPress={() => setShowLocationPicker(false)}
+                >
+                  <Text style={styles.closeButtonText}>Kapat</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.searchContainer}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Konum adı girin..."
+                  value={selectedLocation?.name || ''}
+                  onChangeText={(text) => {
+                    setSelectedLocation(prev => prev ? { ...prev, name: text } : {
+                      latitude: region.latitude,
+                      longitude: region.longitude,
+                      name: text
+                    });
+                  }}
+                  onSubmitEditing={(event) => {
+                    const searchText = event.nativeEvent.text;
+                    if (searchText.trim()) {
+                      searchLocation(searchText);
+                    }
+                  }}
+                  returnKeyType="search"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+
+              <MapView
+                style={styles.map}
+                region={region}
+                onRegionChangeComplete={setRegion}
+                onPress={(e) => {
+                  const { latitude, longitude } = e.nativeEvent.coordinate;
+                  setSelectedLocation({
+                    latitude,
+                    longitude,
+                    name: selectedLocation?.name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+                  });
+                }}
+              >
+                {selectedLocation && (
+                  <Marker
+                    coordinate={{
+                      latitude: selectedLocation.latitude,
+                      longitude: selectedLocation.longitude,
+                    }}
+                    title={selectedLocation.name}
+                  />
+                )}
+              </MapView>
+
+              <View style={styles.locationPickerButtons}>
+                <TouchableOpacity 
+                  style={[styles.confirmButton, { marginBottom: Platform.OS === 'ios' ? 10 : 0 }]}
+                  onPress={() => setShowLocationPicker(false)}
+                >
+                  <Text style={styles.confirmButtonText}>Konumu Seç</Text>
+                </TouchableOpacity>
+              </View>
+            </SafeAreaView>
+          </Modal>
 
           <TextInput
             style={styles.contentInput}
@@ -286,5 +454,81 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+  },
+  locationButton: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  locationButtonLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  locationText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  locationPlaceholder: {
+    fontSize: 16,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  locationPickerContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  locationPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  locationPickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  closeButtonText: {
+    color: '#4A90E2',
+    fontSize: 16,
+  },
+  searchContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  searchInput: {
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#f8f8f8',
+    paddingHorizontal: 12,
+  },
+  map: {
+    flex: 1,
+  },
+  locationPickerButtons: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  confirmButton: {
+    backgroundColor: '#4A90E2',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 
