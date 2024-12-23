@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,13 +13,14 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
-import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Ionicons } from '@expo/vector-icons';
 import { RelationType, relationLabels } from '../types/relations';
 import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../config/firebase';
+import { Memory } from '../types/memories';
 
 interface Note {
   id: string;
@@ -35,6 +36,7 @@ interface RelationData {
   photoURL?: string;
   birthDate?: string;
   notes?: Note[];
+  memories?: Memory[];
   customType?: string;
 }
 
@@ -54,6 +56,37 @@ export default function RelationDetailModal() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
   const [notesExpanded, setNotesExpanded] = useState(false);
+  const [memoriesExpanded, setMemoriesExpanded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
+
+  useEffect(() => {
+    const loadRelationData = async () => {
+      if (!relation?.id) return;
+      
+      try {
+        setIsLoading(true);
+        const relationRef = doc(db, 'relations', relation.id);
+        const relationDoc = await getDoc(relationRef);
+        
+        if (relationDoc.exists()) {
+          const data = relationDoc.data();
+          setRelation(prev => ({
+            ...prev,
+            ...data,
+            memories: data.memories || [],
+            notes: data.notes || []
+          }));
+        }
+      } catch (error) {
+        console.error('Veri yükleme hatası:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRelationData();
+  }, [relation?.id, lastUpdate, params.relation]);
 
   const handleDelete = async () => {
     Alert.alert(
@@ -71,7 +104,7 @@ export default function RelationDetailModal() {
             try {
               if (!user?.uid) return;
               await deleteDoc(doc(db, 'relations', relation.id));
-              router.back();
+              router.replace('/(tabs)');
             } catch (error) {
               console.error('Silme hatası:', error);
               Alert.alert('Hata', 'Bağlantı silinirken bir hata oluştu');
@@ -356,6 +389,70 @@ export default function RelationDetailModal() {
               </View>
             )}
           </View>
+
+          <View style={styles.memoriesContainer}>
+            <TouchableOpacity 
+              style={styles.memoriesHeader}
+              onPress={() => setMemoriesExpanded(!memoriesExpanded)}
+            >
+              <View style={styles.sectionTitleContainer}>
+                <Text style={styles.sectionTitle}>Anılar</Text>
+                <Text style={styles.memoryCount}>
+                  {relation.memories?.length || 0} anı
+                </Text>
+              </View>
+              <Ionicons 
+                name={memoriesExpanded ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color="#666" 
+              />
+            </TouchableOpacity>
+
+            {memoriesExpanded && (
+              <View style={styles.memoriesContent}>
+                {isLoading ? (
+                  <ActivityIndicator color="#4A90E2" />
+                ) : (
+                  <>
+                    <TouchableOpacity 
+                      style={styles.addMemoryButton}
+                      onPress={() => router.push({
+                        pathname: '/addMemory',
+                        params: { relationId: relation.id }
+                      })}
+                    >
+                      <View style={styles.addMemoryContent}>
+                        <Ionicons name="add-circle-outline" size={24} color="#4A90E2" />
+                        <Text style={styles.addMemoryText}>Yeni Anı Ekle</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    <View style={styles.memoriesList}>
+                      {relation.memories && relation.memories.length > 0 ? (
+                        relation.memories.map((memory) => (
+                          <TouchableOpacity
+                            key={memory.id}
+                            style={styles.memoryItem}
+                            onPress={() => router.push({
+                              pathname: '/memoryDetail',
+                              params: { memory: JSON.stringify(memory) }
+                            })}
+                          >
+                            <Text style={styles.memoryTitle}>{memory.title}</Text>
+                            <Text style={styles.memoryDate}>
+                              {new Date(memory.createdAt).toLocaleDateString('tr-TR')}
+                            </Text>
+                          </TouchableOpacity>
+                        ))
+                      ) : (
+                        <Text style={styles.emptyMemoriesText}>Henüz anı eklenmemiş</Text>
+                      )}
+                    </View>
+                  </>
+                )}
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
 
@@ -606,14 +703,73 @@ const styles = StyleSheet.create({
     borderTopColor: '#eee',
     backgroundColor: '#fff',
   },
-  deleteButton: {
+  memoriesContainer: {
+    marginTop: 20,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  memoriesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f8f8f8',
+  },
+  memoriesContent: {
+    padding: 16,
+  },
+  addMemoryButton: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#4A90E2',
+    borderStyle: 'dashed',
+    marginBottom: 16,
+  },
+  addMemoryContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    padding: 12,
+  },
+  addMemoryText: {
+    color: '#4A90E2',
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  memoriesList: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 16,
+  },
+  memoryItem: {
     padding: 16,
+    backgroundColor: '#f8f8f8',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#FF3B30',
+    marginBottom: 12,
+  },
+  memoryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  memoryDate: {
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyMemoriesText: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 16,
+    fontStyle: 'italic',
+  },
+  memoryCount: {
+    fontSize: 14,
+    color: '#666',
   },
 }); 
