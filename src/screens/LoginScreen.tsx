@@ -1,0 +1,70 @@
+import React, { useState } from 'react';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
+
+export default function LoginScreen({ navigation }: any) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleLogin = () => {
+    // Firebase entegrasyonunu daha sonra ekleyeceğiz
+    console.log('Giriş yapılıyor:', email, password);
+  };
+
+  return (
+    <View style={styles.container}>
+      <TextInput
+        style={styles.input}
+        placeholder="E-posta"
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Şifre"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+      />
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
+        <Text style={styles.buttonText}>Giriş Yap</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+        <Text style={styles.linkText}>Hesabınız yok mu? Kayıt olun</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  input: {
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    marginBottom: 15,
+    paddingHorizontal: 10,
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  linkText: {
+    color: '#007AFF',
+    textAlign: 'center',
+    marginTop: 15,
+  },
+}); 
