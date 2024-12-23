@@ -42,10 +42,12 @@ export default function MemoryDetail() {
                 await updateDoc(relationRef, {
                   memories: updatedMemories
                 });
+
+                const updatedDoc = await getDoc(relationRef);
                 
                 router.replace({
                   pathname: '/relationDetail',
-                  params: { relation: JSON.stringify(relationDoc.data()) }
+                  params: { relation: JSON.stringify(updatedDoc.data()) }
                 });
               }
             } catch (error) {
