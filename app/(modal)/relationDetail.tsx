@@ -22,6 +22,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../config/firebase';
 import { Memory } from '../types/memories';
 import { formatDate } from '../utils/date-utils';
+import { colors, globalStyles } from '../constants/styles';
 
 interface Note {
   id: string;
@@ -41,7 +42,7 @@ interface RelationData {
   customType?: string;
 }
 
-// Etiket renkleri için sabit bir obje olu��turalım
+// Etiket renkleri için sabit bir obje oluşturalım
 const TAG_COLORS: Record<string, string> = {
   'Özel Gün': '#FF6B6B',
   'Tatil': '#4ECDC4',
@@ -237,7 +238,7 @@ export default function RelationDetailModal() {
   };
 
   return (
-    <View style={styles.mainContainer}>
+    <View style={styles.container}>
       <ScrollView 
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
@@ -502,9 +503,9 @@ export default function RelationDetailModal() {
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
+  container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   scrollContainer: {
     flex: 1,
@@ -513,10 +514,9 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 16 : 0,
   },
   header: {
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    ...globalStyles.card,
+    marginHorizontal: 16,
+    marginTop: 16,
   },
   avatarContainer: {
     position: 'relative',

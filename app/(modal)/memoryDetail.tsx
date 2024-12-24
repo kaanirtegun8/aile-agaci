@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { Memory, MemoryPhoto } from '../types/memories';
 import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, globalStyles } from '../constants/styles';
 
 export default function MemoryDetail() {
   const params = useLocalSearchParams();
@@ -258,26 +259,109 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
-  scrollContainer: {
-    flex: 1,
-    padding: 16,
+  contentCard: {
+    ...globalStyles.card,
+    margin: 16,
+  },
+  header: {
+    marginBottom: 24,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  dateIcon: {
+    marginRight: 8,
+    color: colors.primary,
+  },
+  date: {
+    fontSize: 15,
+    color: colors.textLight,
+    fontStyle: 'italic',
   },
   content: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#333',
+    color: colors.text,
+    marginBottom: 24,
+  },
+  mapContainer: {
+    marginVertical: 24,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  map: {
+    height: 200,
+    width: '100%',
+  },
+  locationName: {
+    padding: 16,
+    fontSize: 16,
+    color: colors.text,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  photosContainer: {
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: colors.text,
     marginBottom: 16,
   },
-  date: {
-    fontSize: 16,
+  photoList: {
+    marginHorizontal: -8,
+  },
+  photoContainer: {
+    margin: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  photo: {
+    width: 250,
+    height: 250,
+    borderRadius: 12,
+  },
+  tagsContainer: {
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  tagsList: {
+    marginHorizontal: -4,
+  },
+  tagButton: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+  },
+  tagText: {
     color: '#666',
+    fontSize: 14,
   },
   bottomContainer: {
     padding: 16,
@@ -305,44 +389,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  mapContainer: {
-    marginTop: 16,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  map: {
-    height: 200,
-    width: '100%',
-  },
-  locationName: {
-    padding: 12,
-    fontSize: 16,
-    color: '#666',
-  },
-  photosContainer: {
-    marginVertical: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#666',
-  },
-  photoList: {
-    paddingHorizontal: 8,
-  },
-  photoContainer: {
-    margin: 8,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
-  },
-  photo: {
-    width: 200,
-    height: 200,
-    borderRadius: 8,
-  },
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
@@ -365,21 +411,8 @@ const styles = StyleSheet.create({
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height * 0.8,
   },
-  tagsContainer: {
-    marginVertical: 12,
-  },
-  tagsList: {
-    paddingVertical: 4,
-  },
-  tagButton: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  tagText: {
-    color: '#666',
-    fontSize: 14,
+  scrollContainer: {
+    flex: 1,
+    padding: 16,
   },
 }); 

@@ -21,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../config/firebase';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, globalStyles } from '../constants/styles';
 
 interface RelationData {
   userId: string | undefined;
@@ -181,7 +182,7 @@ export default function AddRelationModal() {
             {relationLabels[formData.type]} Ekle
           </Text>
 
-          <View style={styles.form}>
+          <View style={styles.formCard}>
             <TouchableOpacity style={styles.photoContainer} onPress={pickImage}>
               {formData.photoURL ? (
                 <Image
@@ -276,25 +277,23 @@ export default function AddRelationModal() {
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    padding: 20,
-    backgroundColor: '#fff',
+    flex: 1,
+    backgroundColor: colors.background,
   },
   title: {
     fontSize: 24,
     fontWeight: '600',
     marginBottom: 24,
     textAlign: 'center',
+    color: colors.text,
   },
-  form: {
-    gap: 16,
+  formCard: {
+    ...globalStyles.card,
+    margin: 16,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+    ...globalStyles.input,
+    marginBottom: 16,
   },
   notesInput: {
     height: 100,

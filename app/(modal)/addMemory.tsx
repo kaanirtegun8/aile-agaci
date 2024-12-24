@@ -30,6 +30,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../config/firebase';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { colors, globalStyles } from '../constants/styles';
 
 export default function AddMemoryModal() {
   const params = useLocalSearchParams();
@@ -306,7 +307,7 @@ export default function AddMemoryModal() {
       style={styles.container}
     >
       <ScrollView style={styles.scrollContainer}>
-        <View style={styles.content}>
+        <View style={styles.contentCard}>
           <TextInput
             style={styles.titleInput}
             placeholder="Anı Başlığı"
@@ -504,27 +505,18 @@ export default function AddMemoryModal() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.tagsList}
             >
-              {predefinedTags.map((tag) => (
+              {selectedTags.map((tag) => (
                 <TouchableOpacity
                   key={tag}
                   style={[
                     styles.tagButton,
-                    selectedTags.includes(tag) && styles.tagButtonSelected
+                    styles.tagButtonSelected
                   ]}
                   onPress={() => {
-                    setSelectedTags(prev => 
-                      prev.includes(tag) 
-                        ? prev.filter(t => t !== tag)
-                        : [...prev, tag]
-                    );
+                    setSelectedTags(prev => prev.filter(t => t !== tag));
                   }}
                 >
-                  <Text style={[
-                    styles.tagText,
-                    selectedTags.includes(tag) && styles.tagTextSelected
-                  ]}>
-                    {tag}
-                  </Text>
+                  <Text style={styles.tagTextSelected}>{tag}</Text>
                 </TouchableOpacity>
               ))}
               
@@ -539,7 +531,8 @@ export default function AddMemoryModal() {
             <Modal
               visible={showTagInput}
               transparent
-              animationType="slide"
+              animationType="fade"
+              onRequestClose={() => setShowTagInput(false)}
             >
               <View style={styles.tagInputModal}>
                 <View style={styles.tagInputContainer}>
@@ -549,29 +542,31 @@ export default function AddMemoryModal() {
                     value={newTag}
                     onChangeText={setNewTag}
                     placeholder="Etiket adı..."
+                    placeholderTextColor={colors.textLight}
                     maxLength={20}
+                    autoFocus
                   />
                   <View style={styles.tagInputButtons}>
                     <TouchableOpacity 
-                      style={styles.tagInputButton}
-                      onPress={() => {
-                        if (newTag.trim()) {
-                          setSelectedTags(prev => [...prev, newTag.trim()]);
-                          setNewTag('');
-                        }
-                        setShowTagInput(false);
-                      }}
-                    >
-                      <Text style={styles.tagInputButtonText}>Ekle</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.tagInputButton, styles.cancelButton]}
+                      style={[styles.tagInputButton, { backgroundColor: colors.error }]}
                       onPress={() => {
                         setNewTag('');
                         setShowTagInput(false);
                       }}
                     >
                       <Text style={styles.tagInputButtonText}>İptal</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.tagInputButton}
+                      onPress={() => {
+                        if (newTag.trim()) {
+                          setSelectedTags(prev => [...prev, newTag.trim()]);
+                          setNewTag('');
+                          setShowTagInput(false);
+                        }
+                      }}
+                    >
+                      <Text style={styles.tagInputButtonText}>Ekle</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -602,27 +597,24 @@ export default function AddMemoryModal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   scrollContainer: {
     flex: 1,
   },
-  content: {
-    padding: 16,
+  contentCard: {
+    ...globalStyles.card,
+    margin: 16,
   },
   titleInput: {
+    ...globalStyles.input,
     fontSize: 20,
     fontWeight: '600',
-    padding: 16,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
     marginBottom: 16,
   },
   contentInput: {
+    ...globalStyles.input,
     fontSize: 16,
-    padding: 16,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
     minHeight: 200,
   },
   bottomContainer: {
@@ -860,16 +852,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tagInputModal: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   tagInputContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     padding: 20,
     borderRadius: 12,
     width: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   tagInputTitle: {
     fontSize: 18,
@@ -877,11 +878,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   tagInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    ...globalStyles.input,
     marginBottom: 16,
+    color: colors.text,
   },
   tagInputButtons: {
     flexDirection: 'row',
@@ -891,7 +890,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#4A90E2',
+    backgroundColor: colors.primary,
     marginLeft: 8,
   },
   tagInputButtonText: {
