@@ -103,10 +103,19 @@ export default function MemoryDetail() {
             title: memory.title,
             headerRight: () => (
               <TouchableOpacity 
-                onPress={() => router.push({
-                  pathname: '/editMemory',
-                  params: { memory: JSON.stringify(memory) }
-                })}
+                onPress={() => {
+                  if (Platform.OS === 'ios') {
+                    router.push({
+                      pathname: '/editMemory',
+                      params: { memory: JSON.stringify(memory) }
+                    });
+                  } else {
+                    router.navigate({
+                      pathname: '/editMemory',
+                      params: { memory: JSON.stringify(memory) }
+                    });
+                  }
+                }}
               >
                 <Ionicons name="create-outline" size={24} color="#4A90E2" />
               </TouchableOpacity>
@@ -318,7 +327,8 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   photosContainer: {
-    marginTop: 24,
+    marginVertical: 16,
+    paddingBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
@@ -327,7 +337,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   photoList: {
-    marginHorizontal: -8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   photoContainer: {
     margin: 8,

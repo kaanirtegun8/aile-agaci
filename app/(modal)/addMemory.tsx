@@ -316,56 +316,41 @@ export default function AddMemoryModal() {
             onChangeText={setTitle}
           />
 
-          <TouchableOpacity 
-            style={styles.dateButton}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={styles.dateButtonLabel}>Anı Tarihi</Text>
-            <Text style={styles.dateText}>
-              {formatDateToTurkish(memoryDate)}
-            </Text>
-          </TouchableOpacity>
-
-          {Platform.OS === 'ios' ? (
-            <Modal
-              animationType="slide"
-              transparent={true}
-              visible={showDatePicker}
-              onRequestClose={() => setShowDatePicker(false)}
-            >
-              <View style={styles.modalContainer}>
-                <View style={styles.modalContent}>
-                  <View style={styles.datePickerHeader}>
-                    <TouchableOpacity 
-                      style={styles.datePickerButton} 
-                      onPress={handleConfirmDate}
-                    >
-                      <Text style={styles.datePickerButtonText}>Tamam</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <DateTimePicker
-                    value={memoryDate}
-                    mode="date"
-                    display="spinner"
-                    onChange={onDateChange}
-                    maximumDate={new Date()}
-                    locale="tr-TR"
-                  />
-                </View>
-              </View>
-            </Modal>
-          ) : (
-            showDatePicker && (
+          <View style={styles.dateContainer}>
+            <Text style={styles.dateLabel}>Anı Tarihi:</Text>
+            {Platform.OS === 'ios' ? (
               <DateTimePicker
                 value={memoryDate}
                 mode="date"
-                display="default"
+                display="compact"
                 onChange={onDateChange}
-                maximumDate={new Date()}
                 locale="tr-TR"
+                maximumDate={new Date()}
+                style={{ width: 120 }}
               />
-            )
-          )}
+            ) : (
+              <>
+                <TouchableOpacity 
+                  onPress={() => setShowDatePicker(true)}
+                  style={styles.dateButton}
+                >
+                  <Text style={styles.dateButtonText}>
+                    {formatDateToTurkish(memoryDate)}
+                  </Text>
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={memoryDate}
+                    mode="date"
+                    display="default"
+                    onChange={onDateChange}
+                    locale="tr-TR"
+                    maximumDate={new Date()}
+                  />
+                )}
+              </>
+            )}
+          </View>
 
           <TouchableOpacity 
             style={styles.locationButton}
@@ -909,5 +894,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  dateContainer: {
+    marginBottom: 16,
+  },
+  dateLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  dateButtonText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
   },
 }); 

@@ -49,7 +49,7 @@ export default function AddRelationModal() {
     photoURL: '',
     customType: '',
   });
-  const [showDatePicker, setShowDatePicker] = useState(Platform.OS === 'ios');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [uploading, setUploading] = useState(false);
   
 
@@ -220,25 +220,37 @@ export default function AddRelationModal() {
 
             <View style={styles.dateContainer}>
               <Text style={styles.dateLabel}>Doğum Tarihi:</Text>
-              {Platform.OS === 'android' && (
-                <TouchableOpacity 
-                  onPress={() => setShowDatePicker(true)}
-                  style={styles.dateButton}
-                >
-                  <Text style={styles.dateButtonText}>
-                    {formatDate(formData.birthDate)}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              {showDatePicker && (
+              {Platform.OS === 'ios' ? (
                 <DateTimePicker
                   value={formData.birthDate}
                   mode="date"
-                  display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                  display="compact"
                   onChange={onDateChange}
                   locale="tr-TR"
                   maximumDate={new Date()}
+                  style={{ width: 120 }}
                 />
+              ) : (
+                <>
+                  <TouchableOpacity 
+                    onPress={() => setShowDatePicker(true)}
+                    style={styles.dateButton}
+                  >
+                    <Text style={styles.dateButtonText}>
+                      {formatDate(formData.birthDate)}
+                    </Text>
+                  </TouchableOpacity>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={formData.birthDate}
+                      mode="date"
+                      display="default"
+                      onChange={onDateChange}
+                      locale="tr-TR"
+                      maximumDate={new Date()}
+                    />
+                  )}
+                </>
               )}
             </View>
 
@@ -307,10 +319,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    marginBottom: 16,
+    paddingVertical: 8,
   },
   dateLabel: {
     fontSize: 16,
     color: '#666',
+    marginBottom: 4,
   },
   saveButton: {
     backgroundColor: '#4A90E2',

@@ -107,28 +107,41 @@ export default function EditProfileScreen() {
               />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Doğum Tarihi</Text>
-              <TouchableOpacity 
-                style={styles.dateButton}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text style={styles.dateButtonText}>
-                  {profile.birthDate || 'Doğum tarihi seçin'}
-                </Text>
-              </TouchableOpacity>
+            <View style={styles.dateContainer}>
+              <Text style={styles.dateLabel}>Doğum Tarihi:</Text>
+              {Platform.OS === 'ios' ? (
+                <DateTimePicker
+                  value={profile.birthDate ? new Date(profile.birthDate.split('.').reverse().join('-')) : new Date()}
+                  mode="date"
+                  display="compact"
+                  onChange={handleDateChange}
+                  locale="tr-TR"
+                  maximumDate={new Date()}
+                  style={{ width: 120 }}
+                />
+              ) : (
+                <>
+                  <TouchableOpacity 
+                    onPress={() => setShowDatePicker(true)}
+                    style={styles.dateButton}
+                  >
+                    <Text style={styles.dateButtonText}>
+                      {profile.birthDate || 'Doğum tarihi seçin'}
+                    </Text>
+                  </TouchableOpacity>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={profile.birthDate ? new Date(profile.birthDate.split('.').reverse().join('-')) : new Date()}
+                      mode="date"
+                      display="default"
+                      onChange={handleDateChange}
+                      locale="tr-TR"
+                      maximumDate={new Date()}
+                    />
+                  )}
+                </>
+              )}
             </View>
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={profile.birthDate ? new Date(profile.birthDate.split('.').reverse().join('-')) : new Date()}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={handleDateChange}
-                maximumDate={new Date()}
-                style={Platform.OS === 'ios' ? styles.iosDatePicker : undefined}
-              />
-            )}
           </View>
         </ScrollView>
 
@@ -235,5 +248,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     marginBottom: 20
+  },
+  dateContainer: {
+    marginBottom: 20,
+  },
+  dateLabel: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 5,
+    fontWeight: '500',
   },
 }); 
