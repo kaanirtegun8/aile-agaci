@@ -241,10 +241,17 @@ export default function EditMemoryModal() {
         });
 
         const updatedDoc = await getDoc(relationRef);
+        const relationData = updatedDoc.data();
         
+        // İlişki verisini ID ile birlikte gönder
         router.replace({
           pathname: '/relationDetail',
-          params: { relation: JSON.stringify(updatedDoc.data()) }
+          params: { 
+            relation: JSON.stringify({
+              ...relationData,
+              id: memory.relationId
+            })
+          }
         });
       }
     } catch (error) {

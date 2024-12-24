@@ -104,17 +104,11 @@ export default function MemoryDetail() {
             headerRight: () => (
               <TouchableOpacity 
                 onPress={() => {
-                  if (Platform.OS === 'ios') {
-                    router.push({
-                      pathname: '/editMemory',
-                      params: { memory: JSON.stringify(memory) }
-                    });
-                  } else {
-                    router.navigate({
-                      pathname: '/editMemory',
-                      params: { memory: JSON.stringify(memory) }
-                    });
-                  }
+                  const memoryString = JSON.stringify(memory);
+                  router.push({
+                    pathname: '/editMemory',
+                    params: { memory: memoryString }
+                  });
                 }}
               >
                 <Ionicons name="create-outline" size={24} color="#4A90E2" />
@@ -278,10 +272,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '600',
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: 16,
   },
   dateRow: {
     flexDirection: 'row',
@@ -293,7 +287,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   date: {
-    fontSize: 15,
+    fontSize: 14,
     color: colors.textLight,
     fontStyle: 'italic',
   },
@@ -304,23 +298,23 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   mapContainer: {
-    marginVertical: 24,
-    borderRadius: 16,
+    marginVertical: 16,
+    borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: colors.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 4,
+    elevation: 2,
   },
   map: {
-    height: 200,
+    height: 180,
     width: '100%',
   },
   locationName: {
-    padding: 16,
-    fontSize: 16,
+    padding: 12,
+    fontSize: 14,
     color: colors.text,
     backgroundColor: colors.surface,
     borderTopWidth: 1,
@@ -396,8 +390,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   dateContainer: {
-    marginTop: 16,
-    padding: 12,
+    marginTop: 8,
+    padding: 10,
     backgroundColor: '#f8f8f8',
     borderRadius: 8,
     flexDirection: 'row',
@@ -428,5 +422,6 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
     padding: 16,
+    backgroundColor: colors.background,
   },
 }); 
