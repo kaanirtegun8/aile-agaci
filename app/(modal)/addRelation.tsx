@@ -12,7 +12,7 @@ import {
   Image
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { doc, setDoc, collection } from 'firebase/firestore';
+import { doc, setDoc, collection, addDoc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { router, useLocalSearchParams } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -21,6 +21,19 @@ import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../config/firebase';
 import { Ionicons } from '@expo/vector-icons';
+
+interface RelationData {
+  userId: string | undefined;
+  firstName: string;
+  lastName: string;
+  type: RelationType;
+  birthDate: string;
+  photoURL: string;
+  createdAt: number;
+  notes: never[];
+  memories: never[];
+  customType?: string;
+}
 
 export default function AddRelationModal() {
   const { user } = useAuth();
@@ -40,28 +53,63 @@ export default function AddRelationModal() {
   
 
   const handleSave = async () => {
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+      Alert.alert('Hata', 'Lütfen ad ve soyad alanlarını doldurun');
+      return;
+    }
+
     try {
       setLoading(true);
-      if (!user?.uid) return;
+      let photoURL = '';
 
-      const relationsRef = collection(db, 'relations');
-      const newRelationRef = doc(relationsRef);
-      
-      await setDoc(newRelationRef, {
-        userId: user.uid,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        birthDate: formData.birthDate.toLocaleDateString('tr-TR'),
-        notes: [],
+      // Eğer fotoğraf seçildiyse önce yükle
+      if (formData.photoURL) {
+        const response = await fetch(formData.photoURL);
+        const blob = await response.blob();
+        
+        const fileName = `relations/${user?.uid}/${Date.now()}.jpg`;
+        const storageRef = ref(storage, fileName);
+        
+        await uploadBytes(storageRef, blob);
+        photoURL = await getDownloadURL(storageRef);
+      }
+
+      // Firestore dökümanı için veriyi hazırla
+      const relationData: RelationData = {
+        userId: user?.uid,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
         type: formData.type,
-        photoPath: `relations/${user?.uid}/${Date.now()}.jpg`,
-        customType: formData.customType,
-        createdAt: new Date(),
+        birthDate: formData.birthDate.toLocaleDateString('tr-TR'),
+        photoURL,
+        createdAt: new Date().getTime(),
+        notes: [],
+        memories: []
+      };
+
+      // Sadece OTHER_CUSTOM tipinde ve değer varsa customType ekle
+      if (formData.type === RelationType.OTHER_CUSTOM && formData.customType.trim()) {
+        relationData.customType = formData.customType.trim();
+      }
+
+      // Firestore'a kaydet
+      const relationRef = await addDoc(collection(db, 'relations'), relationData);
+
+      // ID ile birlikte veriyi al
+      const newDoc = await getDoc(relationRef);
+      
+      router.replace({
+        pathname: '/relationDetail',
+        params: { 
+          relation: JSON.stringify({
+            ...newDoc.data(),
+            id: relationRef.id
+          })
+        }
       });
 
-      router.back();
     } catch (error) {
-      console.error('Bağlantı eklenirken hata:', error);
+      console.error('Kaydetme hatası:', error);
       Alert.alert('Hata', 'Bağlantı eklenirken bir hata oluştu');
     } finally {
       setLoading(false);
@@ -96,15 +144,10 @@ export default function AddRelationModal() {
         setUploading(true);
         try {
           const imageUri = result.assets[0].uri;
-          const response = await fetch(imageUri);
-          const blob = await response.blob();
-
-          const fileName = `relations/${user?.uid}/${Date.now()}.jpg`;
-          const storageRef = ref(storage, fileName);
           
-          await uploadBytes(storageRef, blob);
-
-          setFormData(prev => ({ ...prev, photoPath: fileName }));
+          // Direkt olarak imageUri'yi state'e kaydet
+          setFormData(prev => ({ ...prev, photoURL: imageUri }));
+          
         } catch (error) {
           console.error('Fotoğraf yükleme hatası:', error);
           Alert.alert('Hata', 'Fotoğraf yüklenirken bir hata oluştu');
@@ -119,97 +162,105 @@ export default function AddRelationModal() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>
-        {relationLabels[formData.type]} Ekle
-      </Text>
-
-      <View style={styles.form}>
-        <TouchableOpacity style={styles.photoContainer} onPress={pickImage}>
-          {formData.photoURL ? (
-            <Image
-              source={{ uri: formData.photoURL }}
-              style={styles.photo}
-            />
-          ) : (
-            <View style={styles.photoPlaceholder}>
-              <Ionicons name="camera" size={40} color="#666" />
-              <Text style={styles.photoPlaceholderText}>Fotoğraf Ekle</Text>
-            </View>
-          )}
-          {uploading && (
-            <View style={styles.uploadingOverlay}>
-              <ActivityIndicator color="#fff" size="large" />
-            </View>
-          )}
-        </TouchableOpacity>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Ad"
-          value={formData.firstName}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, firstName: text }))}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Soyad"
-          value={formData.lastName}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, lastName: text }))}
-        />
-
-        <View style={styles.dateContainer}>
-          <Text style={styles.dateLabel}>Doğum Tarihi:</Text>
-          {Platform.OS === 'android' && (
-            <TouchableOpacity 
-              onPress={() => setShowDatePicker(true)}
-              style={styles.dateButton}
-            >
-              <Text style={styles.dateButtonText}>
-                {formData.birthDate.toLocaleDateString('tr-TR')}
-              </Text>
-            </TouchableOpacity>
-          )}
-          {showDatePicker && (
-            <DateTimePicker
-              value={formData.birthDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={onDateChange}
-            />
-          )}
+    <View style={styles.container}>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4A90E2" />
         </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.container}>
+          <Text style={styles.title}>
+            {relationLabels[formData.type]} Ekle
+          </Text>
 
-        <TextInput
-          style={[styles.input, styles.notesInput]}
-          placeholder="Notlar"
-          value={formData.notes}
-          onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
-          multiline
-        />
+          <View style={styles.form}>
+            <TouchableOpacity style={styles.photoContainer} onPress={pickImage}>
+              {formData.photoURL ? (
+                <Image
+                  source={{ uri: formData.photoURL }}
+                  style={styles.photo}
+                />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Ionicons name="camera" size={40} color="#666" />
+                  <Text style={styles.photoPlaceholderText}>Fotoğraf Ekle</Text>
+                </View>
+              )}
+              {uploading && (
+                <View style={styles.uploadingOverlay}>
+                  <ActivityIndicator color="#fff" size="large" />
+                </View>
+              )}
+            </TouchableOpacity>
 
-        {formData.type === RelationType.OTHER_CUSTOM && (
-          <TextInput
-            style={styles.input}
-            placeholder="Bağlantı Türü (örn: Kuzen, Komşu)"
-            value={formData.customType}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, customType: text }))}
-          />
-        )}
+            <TextInput
+              style={styles.input}
+              placeholder="Ad"
+              value={formData.firstName}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, firstName: text }))}
+            />
 
-        <TouchableOpacity 
-          style={styles.saveButton} 
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.saveButtonText}>Kaydet</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+            <TextInput
+              style={styles.input}
+              placeholder="Soyad"
+              value={formData.lastName}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, lastName: text }))}
+            />
+
+            <View style={styles.dateContainer}>
+              <Text style={styles.dateLabel}>Doğum Tarihi:</Text>
+              {Platform.OS === 'android' && (
+                <TouchableOpacity 
+                  onPress={() => setShowDatePicker(true)}
+                  style={styles.dateButton}
+                >
+                  <Text style={styles.dateButtonText}>
+                    {formData.birthDate.toLocaleDateString('tr-TR')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {showDatePicker && (
+                <DateTimePicker
+                  value={formData.birthDate}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onDateChange}
+                />
+              )}
+            </View>
+
+            <TextInput
+              style={[styles.input, styles.notesInput]}
+              placeholder="Notlar"
+              value={formData.notes}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
+              multiline
+            />
+
+            {formData.type === RelationType.OTHER_CUSTOM && (
+              <TextInput
+                style={styles.input}
+                placeholder="Bağlantı Türü (örn: Kuzen, Komşu)"
+                value={formData.customType}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, customType: text }))}
+              />
+            )}
+
+            <TouchableOpacity 
+              style={styles.saveButton} 
+              onPress={handleSave}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.saveButtonText}>Kaydet</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      )}
+    </View>
   );
 }
 
@@ -302,6 +353,12 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },

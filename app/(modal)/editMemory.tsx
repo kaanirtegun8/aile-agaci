@@ -13,7 +13,7 @@ import {
   SafeAreaView
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Memory, MemoryLocation } from '../types/memories';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -21,37 +21,24 @@ import { formatDateToTurkish } from '../utils/date-utils';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 
-export default function AddMemoryModal() {
+export default function EditMemoryModal() {
   const params = useLocalSearchParams();
-  const relationId = params.relationId as string;
+  const [memory, setMemory] = useState<Memory>(JSON.parse(params.memory as string));
   
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [memoryDate, setMemoryDate] = useState(new Date());
+  const [title, setTitle] = useState(memory.title);
+  const [content, setContent] = useState(memory.content);
+  const [memoryDate, setMemoryDate] = useState(new Date(memory.memoryDate));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<MemoryLocation | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<MemoryLocation | null>(
+    memory.location || null
+  );
   const [region, setRegion] = useState({
-    latitude: 41.0082,
-    longitude: 28.9784,
+    latitude: memory.location?.latitude || 41.0082,
+    longitude: memory.location?.longitude || 28.9784,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
-
-  useEffect(() => {
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({});
-        setRegion({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        });
-      }
-    })();
-  }, []);
 
   const onDateChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
@@ -67,6 +54,53 @@ export default function AddMemoryModal() {
     setShowDatePicker(false);
   };
 
+  const searchLocation = async (searchText: string) => {
+    try {
+      const fullSearchText = searchText.includes('Turkey') ? searchText : `${searchText}, Turkey`;
+      const results = await Location.geocodeAsync(fullSearchText);
+      
+      if (results && results.length > 0) {
+        const { latitude, longitude } = results[0];
+        
+        const newRegion = {
+          latitude,
+          longitude,
+          latitudeDelta: Platform.OS === 'android' ? 0.005 : 0.0922,
+          longitudeDelta: Platform.OS === 'android' ? 0.005 : 0.0421,
+        };
+        
+        setRegion(newRegion);
+
+        const reverseResults = await Location.reverseGeocodeAsync({
+          latitude,
+          longitude
+        });
+
+        let locationName = searchText;
+        if (reverseResults && reverseResults.length > 0) {
+          const address = reverseResults[0];
+          locationName = [
+            address.street,
+            address.district,
+            address.city,
+            address.region
+          ].filter(Boolean).join(', ');
+        }
+
+        setSelectedLocation({
+          latitude,
+          longitude,
+          name: locationName
+        });
+      } else {
+        Alert.alert('Uyarı', 'Bu konum bulunamadı. Lütfen başka bir arama yapın.');
+      }
+    } catch (error) {
+      console.error('Konum arama hatası:', error);
+      Alert.alert('Hata', 'Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin.');
+    }
+  };
+
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
       Alert.alert('Hata', 'Lütfen başlık ve anı içeriğini doldurun');
@@ -74,25 +108,23 @@ export default function AddMemoryModal() {
     }
 
     try {
-      const relationRef = doc(db, 'relations', relationId);
+      const relationRef = doc(db, 'relations', memory.relationId);
       const relationDoc = await getDoc(relationRef);
       
       if (relationDoc.exists()) {
-        const newMemory: Memory = {
-          id: Date.now().toString(),
+        const updatedMemory: Memory = {
+          ...memory,
           title: title.trim(),
           content: content.trim(),
           memoryDate: memoryDate.getTime(),
-          relationId
+          location: selectedLocation || undefined,
         };
 
-        if (selectedLocation) {
-          newMemory.location = selectedLocation;
-        }
+        const memories = relationDoc.data().memories || [];
+        const updatedMemories = memories.map((m: Memory) => 
+          m.id === memory.id ? updatedMemory : m
+        );
 
-        const currentMemories = relationDoc.data().memories || [];
-        const updatedMemories = [...currentMemories, newMemory];
-        
         await updateDoc(relationRef, {
           memories: updatedMemories
         });
@@ -101,69 +133,12 @@ export default function AddMemoryModal() {
         
         router.replace({
           pathname: '/relationDetail',
-          params: { relation: JSON.stringify({
-            ...updatedDoc.data(),
-            id: relationId
-          })}
+          params: { relation: JSON.stringify(updatedDoc.data()) }
         });
       }
     } catch (error) {
-      console.error('Anı ekleme hatası:', error);
-      Alert.alert('Hata', 'Anı eklenirken bir hata oluştu');
-    }
-  };
-
-  const searchLocation = async (searchText: string) => {
-    try {
-      const fullSearchText = `${searchText}, Turkey`;
-      const results = await Location.geocodeAsync(fullSearchText);
-      
-      if (results.length > 0) {
-        const { latitude, longitude } = results[0];
-        
-        // Harita bölgesini güncelle
-        const newRegion = {
-          latitude,
-          longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        };
-        
-        setRegion(newRegion);
-        setSelectedLocation({
-          latitude,
-          longitude,
-          name: searchText
-        });
-
-        // Bulunan konumun adresini al
-        try {
-          const reverseResults = await Location.reverseGeocodeAsync({
-            latitude,
-            longitude
-          });
-          if (reverseResults.length > 0) {
-            const address = reverseResults[0];
-            const locationName = [
-              address.street,
-              address.district,
-              address.subregion,
-              address.city
-            ].filter(Boolean).join(', ');
-            
-            setSelectedLocation(prev => ({
-              ...prev!,
-              name: locationName
-            }));
-          }
-        } catch (error) {
-          console.error('Adres çözümleme hatası:', error);
-        }
-      } else {
-        Alert.alert('Hata', 'Konum bulunamadı');
-      }
-    } catch (error) {
-      Alert.alert('Hata', 'Konum araması başarısız oldu');
+      console.error('Anı güncelleme hatası:', error);
+      Alert.alert('Hata', 'Anı güncellenirken bir hata oluştu');
     }
   };
 
@@ -236,7 +211,7 @@ export default function AddMemoryModal() {
             style={styles.locationButton}
             onPress={() => setShowLocationPicker(true)}
           >
-            <Text style={styles.locationButtonLabel}>Konum Ekle</Text>
+            <Text style={styles.locationButtonLabel}>Konum</Text>
             {selectedLocation ? (
               <Text style={styles.locationText}>{selectedLocation.name}</Text>
             ) : (
@@ -261,27 +236,33 @@ export default function AddMemoryModal() {
               </View>
 
               <View style={styles.searchContainer}>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Konum adı girin..."
-                  value={selectedLocation?.name || ''}
-                  onChangeText={(text) => {
-                    setSelectedLocation(prev => prev ? { ...prev, name: text } : {
-                      latitude: region.latitude,
-                      longitude: region.longitude,
-                      name: text
-                    });
-                  }}
-                  onSubmitEditing={(event) => {
-                    const searchText = event.nativeEvent.text;
-                    if (searchText.trim()) {
-                      searchLocation(searchText);
-                    }
-                  }}
-                  returnKeyType="search"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+                <View style={styles.searchInputContainer}>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Konum adı girin..."
+                    value={selectedLocation?.name || ''}
+                    onChangeText={(text) => {
+                      setSelectedLocation(prev => prev ? { ...prev, name: text } : {
+                        latitude: region.latitude,
+                        longitude: region.longitude,
+                        name: text
+                      });
+                    }}
+                    returnKeyType="search"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity 
+                    style={styles.searchButton}
+                    onPress={() => {
+                      if (selectedLocation?.name) {
+                        searchLocation(selectedLocation.name);
+                      }
+                    }}
+                  >
+                    <Text style={styles.searchButtonText}>Ara</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <MapView
@@ -355,9 +336,10 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
+    padding: 16,
   },
   content: {
-    padding: 16,
+    flex: 1,
   },
   titleInput: {
     fontSize: 20,
@@ -407,80 +389,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  dateButton: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-  },
-  dateButtonLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-  },
-  datePickerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    padding: 8,
-    backgroundColor: '#f8f8f8',
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    marginBottom: 16,
-  },
-  datePickerButton: {
-    padding: 8,
-    minWidth: 60,
-    alignItems: 'center',
-  },
-  datePickerButtonText: {
-    color: '#4A90E2',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 20,
-  },
-  datePickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  locationButton: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-  },
-  locationButtonLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  locationText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-  },
-  locationPlaceholder: {
-    fontSize: 16,
-    color: '#999',
-    fontStyle: 'italic',
-  },
   locationPickerContainer: {
     flex: 1,
     backgroundColor: '#fff',
@@ -510,11 +418,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
+  searchInputContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   searchInput: {
+    flex: 1,
     height: 40,
     borderRadius: 8,
     backgroundColor: '#f8f8f8',
     paddingHorizontal: 12,
+  },
+  searchButton: {
+    backgroundColor: '#4A90E2',
+    padding: 10,
+    borderRadius: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  searchButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   map: {
     flex: 1,
@@ -523,7 +448,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#eee',
-    backgroundColor: '#fff',
   },
   confirmButton: {
     backgroundColor: '#4A90E2',
@@ -533,6 +457,71 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  dateButton: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  dateButtonLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  locationButton: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  locationButtonLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  locationText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  locationPlaceholder: {
+    fontSize: 16,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 20,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  datePickerButton: {
+    padding: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  datePickerButtonText: {
+    color: '#4A90E2',
     fontSize: 16,
     fontWeight: '600',
   },

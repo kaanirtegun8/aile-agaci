@@ -49,7 +49,9 @@ export default function RelationDetailModal() {
     const parsedRelation = JSON.parse(params.relation as string);
     return {
       ...parsedRelation,
-      notes: parsedRelation.notes || []
+      notes: parsedRelation.notes || [],
+      memories: parsedRelation.memories || [],
+      photoURL: parsedRelation.photoURL || ''
     };
   });
   const [uploading, setUploading] = useState(false);
@@ -75,8 +77,10 @@ export default function RelationDetailModal() {
           setRelation(prev => ({
             ...prev,
             ...data,
+            id: relation.id,
             memories: data.memories || [],
-            notes: data.notes || []
+            notes: data.notes || [],
+            photoURL: data.photoURL || prev.photoURL || ''
           }));
         }
       } catch (error) {
@@ -87,7 +91,7 @@ export default function RelationDetailModal() {
     };
 
     loadRelationData();
-  }, [relation?.id, lastUpdate, params.relation]);
+  }, [relation?.id, lastUpdate]);
 
   const handleDelete = async () => {
     Alert.alert(

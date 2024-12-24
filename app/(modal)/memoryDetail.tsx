@@ -5,6 +5,7 @@ import { db } from '../config/firebase';
 import { useState, useEffect } from 'react';
 import { Memory } from '../types/memories';
 import MapView, { Marker } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function MemoryDetail() {
   const params = useLocalSearchParams();
@@ -79,7 +80,21 @@ export default function MemoryDetail() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Stack.Screen options={{ title: memory.title }} />
+        <Stack.Screen 
+          options={{ 
+            title: memory.title,
+            headerRight: () => (
+              <TouchableOpacity 
+                onPress={() => router.push({
+                  pathname: '/editMemory',
+                  params: { memory: JSON.stringify(memory) }
+                })}
+              >
+                <Ionicons name="create-outline" size={24} color="#4A90E2" />
+              </TouchableOpacity>
+            )
+          }} 
+        />
         
         <ScrollView style={styles.scrollContainer}>
           <Text style={styles.title}>{memory.title}</Text>
