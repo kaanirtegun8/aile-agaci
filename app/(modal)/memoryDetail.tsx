@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform, SafeAreaView, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform, SafeAreaView, Image, Dimensions, Modal } from 'react-native';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { doc, deleteDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 export default function MemoryDetail() {
   const params = useLocalSearchParams();
   const [memory, setMemory] = useState<Memory | null>(null);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number>(-1);
   
   useEffect(() => {
     if (params.memory) {
@@ -91,6 +92,8 @@ export default function MemoryDetail() {
     }
   };
 
+  const closePhotoViewer = () => setSelectedPhotoIndex(-1);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -169,17 +172,18 @@ export default function MemoryDetail() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.photoList}
               >
-                {memory.photos.map((photo) => (
-                  <View key={photo.id} style={styles.photoContainer}>
+                {memory.photos.map((photo, index) => (
+                  <TouchableOpacity 
+                    key={photo.id} 
+                    style={styles.photoContainer}
+                    onPress={() => setSelectedPhotoIndex(index)}
+                  >
                     <Image
-                      source={{ 
-                        uri: photo.url,
-                        cache: 'force-cache'
-                      }}
+                      source={{ uri: photo.url, cache: 'force-cache' }}
                       style={styles.photo}
                       resizeMode="cover"
                     />
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
@@ -195,6 +199,38 @@ export default function MemoryDetail() {
           </TouchableOpacity>
         </View>
       </View>
+
+      <Modal
+        visible={selectedPhotoIndex !== -1}
+        transparent={true}
+        onRequestClose={closePhotoViewer}
+      >
+        <View style={styles.modalContainer}>
+          <TouchableOpacity 
+            style={styles.closeButton}
+            onPress={closePhotoViewer}
+          >
+            <Ionicons name="close" size={28} color="#fff" />
+          </TouchableOpacity>
+          
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            contentOffset={{ x: selectedPhotoIndex * Dimensions.get('window').width, y: 0 }}
+          >
+            {memory?.photos?.map((photo) => (
+              <View key={photo.id} style={styles.fullScreenPhotoContainer}>
+                <Image
+                  source={{ uri: photo.url }}
+                  style={styles.fullScreenPhoto}
+                  resizeMode="contain"
+                />
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -290,5 +326,27 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 8,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 1,
+    padding: 10,
+  },
+  fullScreenPhotoContainer: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenPhoto: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height * 0.8,
   },
 }); 
