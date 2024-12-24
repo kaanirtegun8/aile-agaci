@@ -164,6 +164,22 @@ export default function MemoryDetail() {
             </Text>
           </View>
 
+          {memory.tags && memory.tags.length > 0 && (
+            <View style={styles.tagsContainer}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tagsList}
+              >
+                {memory.tags.map((tag) => (
+                  <View key={tag} style={styles.tagButton}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           {memory.photos && memory.photos.length > 0 && (
             <View style={styles.photosContainer}>
               <Text style={styles.sectionTitle}>Fotoğraflar</Text>
@@ -348,5 +364,22 @@ const styles = StyleSheet.create({
   fullScreenPhoto: {
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height * 0.8,
+  },
+  tagsContainer: {
+    marginVertical: 12,
+  },
+  tagsList: {
+    paddingVertical: 4,
+  },
+  tagButton: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+  },
+  tagText: {
+    color: '#666',
+    fontSize: 14,
   },
 }); 

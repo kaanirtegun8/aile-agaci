@@ -10,16 +10,22 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Modal,
-  SafeAreaView
+  SafeAreaView,
+  Image,
+  ActivityIndicator
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Memory, MemoryLocation } from '../types/memories';
+import { Memory, MemoryLocation, MemoryPhoto } from '../types/memories';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { formatDateToTurkish } from '../utils/date-utils';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../config/firebase';
 
 export default function EditMemoryModal() {
   const params = useLocalSearchParams();
@@ -39,6 +45,49 @@ export default function EditMemoryModal() {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+  const [photos, setPhotos] = useState<MemoryPhoto[]>(memory?.photos || []);
+  const [uploading, setUploading] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>(memory?.tags || []);
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [newTag, setNewTag] = useState('');
+
+  const predefinedTags = [
+    'Özel Gün', 
+    'Tatil', 
+    'Yemek', 
+    'Gezi', 
+    'Eğlence',
+    'Aile',
+    'Romantik'
+  ];
+
+  useEffect(() => {
+    if (params.memory) {
+      const parsedMemory = JSON.parse(params.memory as string);
+      
+      // Fotoğraf URL'lerini düzelt
+      if (parsedMemory.photos) {
+        parsedMemory.photos = parsedMemory.photos.map((photo: MemoryPhoto) => {
+          const urlParts = photo.url.split('/');
+          const lastTwoParts = urlParts.slice(-3).join('%2F');
+          const otherParts = urlParts.slice(0, -3).join('/');
+          
+          return {
+            ...photo,
+            url: `${otherParts}/${lastTwoParts}`
+          };
+        });
+      }
+
+      setMemory(parsedMemory);
+      setTitle(parsedMemory.title);
+      setContent(parsedMemory.content);
+      setMemoryDate(new Date(parsedMemory.memoryDate));
+      setSelectedLocation(parsedMemory.location || null);
+      setPhotos(parsedMemory.photos || []);
+      setSelectedTags(parsedMemory.tags || []);
+    }
+  }, [params.memory]);
 
   const onDateChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
@@ -101,6 +150,60 @@ export default function EditMemoryModal() {
     }
   };
 
+  const pickImage = async () => {
+    if (photos.length >= 3) {
+      Alert.alert('Uyarı', 'En fazla 3 fotoğraf ekleyebilirsiniz');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.5,
+        aspect: [1, 1]
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setUploading(true);
+        try {
+          const imageUri = result.assets[0].uri;
+          const timestamp = Date.now();
+          
+          const filePath = `memories/${memory.relationId}/${timestamp}.jpg`;
+          const storageRef = ref(storage, filePath);
+          
+          const response = await fetch(imageUri);
+          const blob = await response.blob();
+          
+          await uploadBytes(storageRef, blob);
+          const downloadUrl = await getDownloadURL(storageRef);
+          
+          const encodedUrl = downloadUrl.replace('memories/', 'memories%2F');
+          
+          setPhotos(prev => [...prev, {
+            id: timestamp.toString(),
+            url: encodedUrl,
+            path: filePath
+          }]);
+        } catch (error) {
+          console.error('Upload error:', error);
+          Alert.alert('Hata', 'Fotoğraf yüklenemedi');
+        } finally {
+          setUploading(false);
+        }
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert('Hata', 'Fotoğraf seçilemedi');
+      setUploading(false);
+    }
+  };
+
+  const removePhoto = (id: string) => {
+    setPhotos(prev => prev.filter(photo => photo.id !== id));
+  };
+
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
       Alert.alert('Hata', 'Lütfen başlık ve anı içeriğini doldurun');
@@ -117,14 +220,21 @@ export default function EditMemoryModal() {
           title: title.trim(),
           content: content.trim(),
           memoryDate: memoryDate.getTime(),
-          location: selectedLocation || undefined,
+          photos: photos.length > 0 ? photos : null,
+          tags: selectedTags.length > 0 ? selectedTags : null
         };
 
-        const memories = relationDoc.data().memories || [];
-        const updatedMemories = memories.map((m: Memory) => 
+        if (selectedLocation) {
+          updatedMemory.location = selectedLocation;
+        } else {
+          updatedMemory.location = null;
+        }
+
+        const currentMemories = relationDoc.data().memories || [];
+        const updatedMemories = currentMemories.map((m: Memory) => 
           m.id === memory.id ? updatedMemory : m
         );
-
+        
         await updateDoc(relationRef, {
           memories: updatedMemories
         });
@@ -308,6 +418,82 @@ export default function EditMemoryModal() {
             multiline
             textAlignVertical="top"
           />
+
+          <View style={styles.photosContainer}>
+            <Text style={styles.sectionTitle}>Fotoğraflar (En fazla 3)</Text>
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.photoList}
+            >
+              {photos.map((item) => (
+                <View key={item.id} style={styles.photoItem}>
+                  <Image source={{ uri: item.url }} style={styles.photo} />
+                  <TouchableOpacity
+                    style={styles.removePhotoButton}
+                    onPress={() => removePhoto(item.id)}
+                  >
+                    <Ionicons name="close-circle" size={24} color="#FF3B30" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {photos.length < 3 && (
+                <TouchableOpacity 
+                  style={styles.addPhotoButton} 
+                  onPress={pickImage}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <ActivityIndicator color="#4A90E2" />
+                  ) : (
+                    <Ionicons name="camera" size={32} color="#4A90E2" />
+                  )}
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
+
+          <View style={styles.tagsContainer}>
+            <Text style={styles.sectionTitle}>Etiketler (İsteğe Bağlı)</Text>
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tagsList}
+            >
+              {predefinedTags.map((tag) => (
+                <TouchableOpacity
+                  key={tag}
+                  style={[
+                    styles.tagButton,
+                    selectedTags.includes(tag) && styles.tagButtonSelected
+                  ]}
+                  onPress={() => {
+                    setSelectedTags(prev => 
+                      prev.includes(tag) 
+                        ? prev.filter(t => t !== tag)
+                        : [...prev, tag]
+                    );
+                  }}
+                >
+                  <Text style={[
+                    styles.tagText,
+                    selectedTags.includes(tag) && styles.tagTextSelected
+                  ]}>
+                    {tag}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              
+              <TouchableOpacity
+                style={styles.addTagButton}
+                onPress={() => setShowTagInput(true)}
+              >
+                <Ionicons name="add" size={20} color="#4A90E2" />
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
         </View>
       </ScrollView>
       
@@ -524,5 +710,71 @@ const styles = StyleSheet.create({
     color: '#4A90E2',
     fontSize: 16,
     fontWeight: '600',
+  },
+  photosContainer: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  photoList: {
+    gap: 8,
+  },
+  photoItem: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
+    borderRadius: 8,
+  },
+  addPhotoButton: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#f8f8f8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tagsContainer: {
+    marginBottom: 16,
+  },
+  tagsList: {
+    gap: 8,
+  },
+  tagButton: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 10,
+    alignItems: 'center',
+  },
+  tagButtonSelected: {
+    backgroundColor: '#4A90E2',
+  },
+  tagText: {
+    color: '#333',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  tagTextSelected: {
+    color: '#fff',
+  },
+  addTagButton: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 10,
+    alignItems: 'center',
   },
 }); 

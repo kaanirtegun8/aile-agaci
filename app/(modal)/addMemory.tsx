@@ -50,6 +50,19 @@ export default function AddMemoryModal() {
   });
   const [photos, setPhotos] = useState<MemoryPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [newTag, setNewTag] = useState('');
+
+  const predefinedTags = [
+    'Özel Gün', 
+    'Tatil', 
+    'Yemek', 
+    'Gezi', 
+    'Eğlence',
+    'Aile',
+    'Romantik'
+  ];
 
   useEffect(() => {
     (async () => {
@@ -97,7 +110,8 @@ export default function AddMemoryModal() {
           title: title.trim(),
           content: content.trim(),
           memoryDate: memoryDate.getTime(),
-          relationId
+          relationId,
+          tags: selectedTags.length > 0 ? selectedTags : undefined
         };
 
         // Fotoğraf varsa ekle
@@ -481,6 +495,89 @@ export default function AddMemoryModal() {
               )}
             </ScrollView>
           </View>
+
+          <View style={styles.tagsContainer}>
+            <Text style={styles.sectionTitle}>Etiketler (İsteğe Bağlı)</Text>
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tagsList}
+            >
+              {predefinedTags.map((tag) => (
+                <TouchableOpacity
+                  key={tag}
+                  style={[
+                    styles.tagButton,
+                    selectedTags.includes(tag) && styles.tagButtonSelected
+                  ]}
+                  onPress={() => {
+                    setSelectedTags(prev => 
+                      prev.includes(tag) 
+                        ? prev.filter(t => t !== tag)
+                        : [...prev, tag]
+                    );
+                  }}
+                >
+                  <Text style={[
+                    styles.tagText,
+                    selectedTags.includes(tag) && styles.tagTextSelected
+                  ]}>
+                    {tag}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              
+              <TouchableOpacity
+                style={styles.addTagButton}
+                onPress={() => setShowTagInput(true)}
+              >
+                <Ionicons name="add" size={20} color="#4A90E2" />
+              </TouchableOpacity>
+            </ScrollView>
+
+            <Modal
+              visible={showTagInput}
+              transparent
+              animationType="slide"
+            >
+              <View style={styles.tagInputModal}>
+                <View style={styles.tagInputContainer}>
+                  <Text style={styles.tagInputTitle}>Yeni Etiket Ekle</Text>
+                  <TextInput
+                    style={styles.tagInput}
+                    value={newTag}
+                    onChangeText={setNewTag}
+                    placeholder="Etiket adı..."
+                    maxLength={20}
+                  />
+                  <View style={styles.tagInputButtons}>
+                    <TouchableOpacity 
+                      style={styles.tagInputButton}
+                      onPress={() => {
+                        if (newTag.trim()) {
+                          setSelectedTags(prev => [...prev, newTag.trim()]);
+                          setNewTag('');
+                        }
+                        setShowTagInput(false);
+                      }}
+                    >
+                      <Text style={styles.tagInputButtonText}>Ekle</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.tagInputButton, styles.cancelButton]}
+                      onPress={() => {
+                        setNewTag('');
+                        setShowTagInput(false);
+                      }}
+                    >
+                      <Text style={styles.tagInputButtonText}>İptal</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+          </View>
         </View>
       </ScrollView>
       
@@ -731,5 +828,75 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     margin: 8,
+  },
+  tagsContainer: {
+    marginVertical: 16,
+  },
+  tagsList: {
+    paddingVertical: 8,
+  },
+  tagButton: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+  },
+  tagButtonSelected: {
+    backgroundColor: '#4A90E2',
+  },
+  tagText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  tagTextSelected: {
+    color: '#fff',
+  },
+  addTagButton: {
+    backgroundColor: '#f0f0f0',
+    padding: 8,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tagInputModal: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  tagInputContainer: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 12,
+    width: '80%',
+  },
+  tagInputTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  tagInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  tagInputButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  tagInputButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#4A90E2',
+    marginLeft: 8,
+  },
+  tagInputButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 }); 

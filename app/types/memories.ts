@@ -17,8 +17,9 @@ export interface Memory {
   content: string;
   memoryDate: number;
   relationId: string;
-  location?: MemoryLocation;
-  photos?: MemoryPhoto[];
+  location?: MemoryLocation | null;
+  photos?: MemoryPhoto[] | null;
+  tags?: string[] | null;
 }
 
 export interface MemoryStore {

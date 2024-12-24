@@ -41,6 +41,18 @@ interface RelationData {
   customType?: string;
 }
 
+// Etiket renkleri için sabit bir obje olu��turalım
+const TAG_COLORS: Record<string, string> = {
+  'Özel Gün': '#FF6B6B',
+  'Tatil': '#4ECDC4',
+  'Yemek': '#FFB900',
+  'Gezi': '#96CEB4',
+  'Eğlence': '#FF8CC3',
+  'Aile': '#6C5CE7',
+  'Romantik': '#FF78B2',
+  'default': '#A0A0A0'
+} as const;
+
 export default function RelationDetailModal() {
   const params = useLocalSearchParams();
   const { user } = useAuth();
@@ -447,6 +459,21 @@ export default function RelationDetailModal() {
                             <Text style={styles.memoryDate}>
                               {formatDate(memory.memoryDate)}
                             </Text>
+                            {memory.tags && memory.tags.length > 0 && (
+                              <View style={styles.tagsRow}>
+                                {memory.tags.map((tag) => (
+                                  <View 
+                                    key={tag} 
+                                    style={[
+                                      styles.tagPill,
+                                      { backgroundColor: TAG_COLORS[tag] || TAG_COLORS.default }
+                                    ]}
+                                  >
+                                    <Text style={styles.tagText}>{tag}</Text>
+                                  </View>
+                                ))}
+                              </View>
+                            )}
                           </TouchableOpacity>
                         ))
                       ) : (
@@ -776,5 +803,22 @@ const styles = StyleSheet.create({
   memoryCount: {
     fontSize: 14,
     color: '#666',
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    gap: 6,
+  },
+  tagPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    opacity: 0.9,
+  },
+  tagText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '500',
   },
 }); 
