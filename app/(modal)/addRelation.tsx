@@ -52,6 +52,14 @@ export default function AddRelationModal() {
   const [uploading, setUploading] = useState(false);
   
 
+  const formatDate = (date: Date): string => {
+    return date.toLocaleDateString('tr-TR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit'
+    }).replace(/\//g, '.');
+  };
+
   const handleSave = async () => {
     if (!formData.firstName.trim() || !formData.lastName.trim()) {
       Alert.alert('Hata', 'Lütfen ad ve soyad alanlarını doldurun');
@@ -80,7 +88,7 @@ export default function AddRelationModal() {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         type: formData.type,
-        birthDate: formData.birthDate.toLocaleDateString('tr-TR'),
+        birthDate: formatDate(formData.birthDate),
         photoURL,
         createdAt: new Date().getTime(),
         notes: [],
@@ -215,7 +223,7 @@ export default function AddRelationModal() {
                   style={styles.dateButton}
                 >
                   <Text style={styles.dateButtonText}>
-                    {formData.birthDate.toLocaleDateString('tr-TR')}
+                    {formatDate(formData.birthDate)}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -223,8 +231,10 @@ export default function AddRelationModal() {
                 <DateTimePicker
                   value={formData.birthDate}
                   mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  display={Platform.OS === 'ios' ? 'compact' : 'default'}
                   onChange={onDateChange}
+                  locale="tr-TR"
+                  maximumDate={new Date()}
                 />
               )}
             </View>
