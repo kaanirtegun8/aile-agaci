@@ -205,6 +205,7 @@ export default function AddRelationModal() {
             <TextInput
               style={styles.input}
               placeholder="Ad"
+              placeholderTextColor={colors.textLight}
               value={formData.firstName}
               onChangeText={(text) => setFormData(prev => ({ ...prev, firstName: text }))}
             />
@@ -212,6 +213,7 @@ export default function AddRelationModal() {
             <TextInput
               style={styles.input}
               placeholder="Soyad"
+              placeholderTextColor={colors.textLight}
               value={formData.lastName}
               onChangeText={(text) => setFormData(prev => ({ ...prev, lastName: text }))}
             />
@@ -243,6 +245,7 @@ export default function AddRelationModal() {
             <TextInput
               style={[styles.input, styles.notesInput]}
               placeholder="Notlar"
+              placeholderTextColor={colors.textLight}
               value={formData.notes}
               onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
               multiline
@@ -252,6 +255,7 @@ export default function AddRelationModal() {
               <TextInput
                 style={styles.input}
                 placeholder="Bağlantı Türü (örn: Kuzen, Komşu)"
+                placeholderTextColor={colors.textLight}
                 value={formData.customType}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, customType: text }))}
               />

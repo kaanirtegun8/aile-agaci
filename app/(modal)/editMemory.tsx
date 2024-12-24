@@ -26,6 +26,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../config/firebase';
+import { colors, globalStyles } from '../constants/styles';
 
 export default function EditMemoryModal() {
   const params = useLocalSearchParams();
@@ -262,6 +263,7 @@ export default function EditMemoryModal() {
           <TextInput
             style={styles.titleInput}
             placeholder="Anı Başlığı"
+            placeholderTextColor={colors.textLight}
             value={title}
             onChangeText={setTitle}
           />
@@ -413,6 +415,7 @@ export default function EditMemoryModal() {
           <TextInput
             style={styles.contentInput}
             placeholder="Anınızı yazın..."
+            placeholderTextColor={colors.textLight}
             value={content}
             onChangeText={setContent}
             multiline

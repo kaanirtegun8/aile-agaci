@@ -311,6 +311,7 @@ export default function AddMemoryModal() {
           <TextInput
             style={styles.titleInput}
             placeholder="Anı Başlığı"
+            placeholderTextColor={colors.textLight}
             value={title}
             onChangeText={setTitle}
           />
@@ -398,6 +399,7 @@ export default function AddMemoryModal() {
                 <TextInput
                   style={styles.searchInput}
                   placeholder="Konum adı girin..."
+                  placeholderTextColor={colors.textLight}
                   value={selectedLocation?.name || ''}
                   onChangeText={(text) => {
                     setSelectedLocation(prev => prev ? { ...prev, name: text } : {
@@ -456,6 +458,7 @@ export default function AddMemoryModal() {
           <TextInput
             style={styles.contentInput}
             placeholder="Anınızı yazın..."
+            placeholderTextColor={colors.textLight}
             value={content}
             onChangeText={setContent}
             multiline

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Link } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
+import { colors } from '../constants/styles';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -40,6 +41,7 @@ export default function LoginScreen() {
       <TextInput
         style={styles.input}
         placeholder="E-posta"
+        placeholderTextColor={colors.textLight}
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -49,6 +51,7 @@ export default function LoginScreen() {
       <TextInput
         style={styles.input}
         placeholder="Şifre"
+        placeholderTextColor={colors.textLight}
         value={password}
         onChangeText={setPassword}
         secureTextEntry

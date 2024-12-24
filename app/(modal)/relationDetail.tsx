@@ -321,10 +321,11 @@ export default function RelationDetailModal() {
                   <View style={styles.newNoteContainer}>
                     <TextInput
                       style={styles.noteInput}
+                      placeholder="Not ekle..."
+                      placeholderTextColor={colors.textLight}
                       value={noteText}
                       onChangeText={setNoteText}
                       multiline
-                      placeholder="Notunuzu yazın..."
                       autoFocus
                     />
                     <View style={styles.noteInputButtons}>
@@ -355,6 +356,8 @@ export default function RelationDetailModal() {
                           <View key={`edit-${note.id}`} style={styles.noteInputContainer}>
                             <TextInput
                               style={styles.noteInput}
+                              placeholder="Not ekle..."
+                              placeholderTextColor={colors.textLight}
                               value={noteText}
                               onChangeText={setNoteText}
                               multiline

@@ -12,6 +12,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { router } from 'expo-router';
+import { colors } from '../constants/styles';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -52,6 +53,7 @@ export default function RegisterScreen() {
       <TextInput
         style={styles.input}
         placeholder="Ad"
+        placeholderTextColor={colors.textLight}
         value={firstName}
         onChangeText={setFirstName}
       />
@@ -59,6 +61,7 @@ export default function RegisterScreen() {
       <TextInput
         style={styles.input}
         placeholder="Soyad"
+        placeholderTextColor={colors.textLight}
         value={lastName}
         onChangeText={setLastName}
       />
@@ -66,6 +69,7 @@ export default function RegisterScreen() {
       <TextInput
         style={styles.input}
         placeholder="E-posta"
+        placeholderTextColor={colors.textLight}
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -75,6 +79,7 @@ export default function RegisterScreen() {
       <TextInput
         style={styles.input}
         placeholder="Şifre"
+        placeholderTextColor={colors.textLight}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
