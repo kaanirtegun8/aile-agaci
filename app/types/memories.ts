@@ -4,6 +4,13 @@ export interface MemoryLocation {
   name: string;
 }
 
+export interface MemoryPhoto {
+  id: string;
+  url: string;
+  path: string;
+  encodedUrl?: string;
+}
+
 export interface Memory {
   id: string;
   title: string;
@@ -11,6 +18,7 @@ export interface Memory {
   memoryDate: number;
   relationId: string;
   location?: MemoryLocation;
+  photos?: MemoryPhoto[];
 }
 
 export interface MemoryStore {

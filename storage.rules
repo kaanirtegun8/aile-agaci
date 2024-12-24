@@ -7,5 +7,8 @@ service firebase.storage {
     match /profilePhotos/{fileName} {
       allow read, write: if request.auth != null;
     }
+    match /memories/{relationId}/{fileName} {
+      allow read, write: if request.auth != null;
+    }
   }
 } 

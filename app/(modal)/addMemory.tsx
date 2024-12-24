@@ -10,20 +10,31 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Modal,
-  SafeAreaView
+  SafeAreaView,
+  FlatList,
+  Image,
+  Dimensions,
+  ActivityIndicator
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Memory, MemoryLocation } from '../types/memories';
+import { Memory, MemoryLocation, MemoryPhoto } from '../types/memories';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { formatDateToTurkish } from '../utils/date-utils';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
+import type { ImagePickerAsset } from 'expo-image-picker';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../config/firebase';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../context/AuthContext';
 
 export default function AddMemoryModal() {
   const params = useLocalSearchParams();
   const relationId = params.relationId as string;
+  const { user } = useAuth();
   
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -37,6 +48,8 @@ export default function AddMemoryModal() {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+  const [photos, setPhotos] = useState<MemoryPhoto[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -78,13 +91,23 @@ export default function AddMemoryModal() {
       const relationDoc = await getDoc(relationRef);
       
       if (relationDoc.exists()) {
+        const memoryId = Date.now().toString();
         const newMemory: Memory = {
-          id: Date.now().toString(),
+          id: memoryId,
           title: title.trim(),
           content: content.trim(),
           memoryDate: memoryDate.getTime(),
           relationId
         };
+
+        // Fotoğraf varsa ekle
+        if (photos.length > 0) {
+          newMemory.photos = photos.map(photo => ({
+            id: photo.id,
+            url: photo.url,
+            path: photo.path
+          }));
+        }
 
         if (selectedLocation) {
           newMemory.location = selectedLocation;
@@ -101,10 +124,12 @@ export default function AddMemoryModal() {
         
         router.replace({
           pathname: '/relationDetail',
-          params: { relation: JSON.stringify({
-            ...updatedDoc.data(),
-            id: relationId
-          })}
+          params: { 
+            relation: JSON.stringify({
+              ...updatedDoc.data(),
+              id: relationId
+            })
+          }
         });
       }
     } catch (error) {
@@ -165,6 +190,100 @@ export default function AddMemoryModal() {
     } catch (error) {
       Alert.alert('Hata', 'Konum araması başarısız oldu');
     }
+  };
+
+  const uploadPhoto = async (uri: string): Promise<string> => {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      
+      // Unique bir dosya adı oluştur
+      const fileName = `${Date.now()}.jpg`;
+      // Düzgün bir path yapısı kur
+      const storageRef = ref(storage, `memories/${fileName}`);
+      
+      await uploadBytes(storageRef, blob);
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error("Fotoğraf yükleme hatası:", error);
+      throw error;
+    }
+  };
+
+  const uploadPhotos = async (photos: ImagePickerAsset[]): Promise<MemoryPhoto[]> => {
+    const uploadPromises = photos.map(async (photo) => {
+      const timestamp = Date.now().toString();
+      const downloadURL = await uploadPhoto(photo.uri);
+      return {
+        id: timestamp,
+        url: downloadURL,
+        path: `memories/${timestamp}.jpg`
+      };
+    });
+
+    return Promise.all(uploadPromises);
+  };
+
+  const pickImage = async () => {
+    if (!user?.uid) {
+      Alert.alert('Hata', 'Oturum açmanız gerekiyor');
+      return;
+    }
+
+    if (photos.length >= 3) {
+      Alert.alert('Uyarı', 'En fazla 3 fotoğraf ekleyebilirsiniz');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.5,
+        aspect: [1, 1]
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setUploading(true);
+        try {
+          const imageUri = result.assets[0].uri;
+          const timestamp = Date.now();
+          
+          const filePath = `memories/${relationId}/${timestamp}.jpg`;
+          const storageRef = ref(storage, filePath);
+          
+          const response = await fetch(imageUri);
+          const blob = await response.blob();
+          
+          await uploadBytes(storageRef, blob);
+          const downloadUrl = await getDownloadURL(storageRef);
+          
+          const encodedUrl = downloadUrl.replace('memories/', 'memories%2F');
+          
+          setPhotos(prev => [...prev, {
+            id: timestamp.toString(),
+            url: encodedUrl,
+            path: filePath
+          }]);
+
+        } catch (error) {
+          console.error('Upload error:', error);
+          Alert.alert('Hata', 'Fotoğraf yüklenemedi');
+        } finally {
+          setUploading(false);
+        }
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert('Hata', 'Fotoğraf seçilemedi');
+      setUploading(false);
+    }
+  };
+
+  const removePhoto = (id: string) => {
+    setPhotos(prev => prev.filter(photo => photo.id !== id));
   };
 
   return (
@@ -327,6 +446,41 @@ export default function AddMemoryModal() {
             multiline
             textAlignVertical="top"
           />
+
+          <View style={styles.photosContainer}>
+            <Text style={styles.sectionTitle}>Fotoğraflar (En fazla 3)</Text>
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.photoList}
+            >
+              {photos.map((item) => (
+                <View key={item.id} style={styles.photoItem}>
+                  <Image source={{ uri: item.url }} style={styles.photo} />
+                  <TouchableOpacity
+                    style={styles.removePhotoButton}
+                    onPress={() => removePhoto(item.id)}
+                  >
+                    <Ionicons name="close-circle" size={24} color="#FF3B30" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {photos.length < 3 && (
+                <TouchableOpacity 
+                  style={styles.addPhotoButton} 
+                  onPress={pickImage}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <ActivityIndicator color="#4A90E2" />
+                  ) : (
+                    <Ionicons name="camera" size={32} color="#4A90E2" />
+                  )}
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
         </View>
       </ScrollView>
       
@@ -535,5 +689,47 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  photosContainer: {
+    marginVertical: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#666',
+  },
+  photoList: {
+    flexDirection: 'row',
+    paddingHorizontal: 8,
+  },
+  photoItem: {
+    margin: 8,
+    position: 'relative',
+    width: 120,
+  },
+  photo: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
+  addPhotoButton: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    backgroundColor: '#f8f8f8',
+    borderWidth: 1,
+    borderColor: '#4A90E2',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: 8,
   },
 }); 

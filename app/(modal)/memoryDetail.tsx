@@ -1,9 +1,9 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform, SafeAreaView, Image, Dimensions } from 'react-native';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { doc, deleteDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useState, useEffect } from 'react';
-import { Memory } from '../types/memories';
+import { Memory, MemoryPhoto } from '../types/memories';
 import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -13,7 +13,21 @@ export default function MemoryDetail() {
   
   useEffect(() => {
     if (params.memory) {
-      setMemory(JSON.parse(params.memory as string));
+      const parsedMemory = JSON.parse(params.memory as string);
+      
+      if (parsedMemory.photos) {
+        parsedMemory.photos = parsedMemory.photos.map((photo: MemoryPhoto) => {
+          const urlParts = photo.url.split('/');
+          const lastTwoParts = urlParts.slice(-3).join('%2F');
+          const otherParts = urlParts.slice(0, -3).join('/');
+          
+          return {
+            ...photo,
+            url: `${otherParts}/${lastTwoParts}`
+          };
+        });
+      }
+      setMemory(parsedMemory);
     }
   }, [params.memory]);
 
@@ -146,6 +160,30 @@ export default function MemoryDetail() {
               Tarih: {formatDate(memory.memoryDate)}
             </Text>
           </View>
+
+          {memory.photos && memory.photos.length > 0 && (
+            <View style={styles.photosContainer}>
+              <Text style={styles.sectionTitle}>Fotoğraflar</Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.photoList}
+              >
+                {memory.photos.map((photo) => (
+                  <View key={photo.id} style={styles.photoContainer}>
+                    <Image
+                      source={{ 
+                        uri: photo.url,
+                        cache: 'force-cache'
+                      }}
+                      style={styles.photo}
+                      resizeMode="cover"
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </ScrollView>
 
         <View style={styles.bottomContainer}>
@@ -229,5 +267,28 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: '#666',
+  },
+  photosContainer: {
+    marginVertical: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#666',
+  },
+  photoList: {
+    paddingHorizontal: 8,
+  },
+  photoContainer: {
+    margin: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+  },
+  photo: {
+    width: 200,
+    height: 200,
+    borderRadius: 8,
   },
 }); 
