@@ -32,6 +32,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { colors, globalStyles } from '../constants/styles';
 
+const predefinedTags = [
+  'Özel Gün', 
+  'Tatil', 
+  'Yemek', 
+  'Gezi', 
+  'Eğlence',
+  'Aile',
+  'Romantik'
+];
+
 export default function AddMemoryModal() {
   const params = useLocalSearchParams();
   const relationId = params.relationId as string;
@@ -54,16 +64,6 @@ export default function AddMemoryModal() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTag, setNewTag] = useState('');
-
-  const predefinedTags = [
-    'Özel Gün', 
-    'Tatil', 
-    'Yemek', 
-    'Gezi', 
-    'Eğlence',
-    'Aile',
-    'Romantik'
-  ];
 
   useEffect(() => {
     (async () => {
@@ -508,18 +508,27 @@ export default function AddMemoryModal() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.tagsList}
             >
-              {selectedTags.map((tag) => (
+              {predefinedTags.map((tag) => (
                 <TouchableOpacity
                   key={tag}
                   style={[
                     styles.tagButton,
-                    styles.tagButtonSelected
+                    selectedTags.includes(tag) && styles.tagButtonSelected
                   ]}
                   onPress={() => {
-                    setSelectedTags(prev => prev.filter(t => t !== tag));
+                    setSelectedTags(prev => 
+                      prev.includes(tag) 
+                        ? prev.filter(t => t !== tag)
+                        : [...prev, tag]
+                    );
                   }}
                 >
-                  <Text style={styles.tagTextSelected}>{tag}</Text>
+                  <Text style={[
+                    styles.tagText,
+                    selectedTags.includes(tag) && styles.tagTextSelected
+                  ]}>
+                    {tag}
+                  </Text>
                 </TouchableOpacity>
               ))}
               

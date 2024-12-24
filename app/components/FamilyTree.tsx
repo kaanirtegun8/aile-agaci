@@ -38,6 +38,10 @@ const FamilyTree: React.FC = () => {
   const [relations, setRelations] = useState<Relation[]>([]);
   const [relationCategories] = useState([
     {
+      title: 'Eş/Sevgili',
+      types: [RelationType.SPOUSE, RelationType.PARTNER]
+    },
+    {
       title: 'Ebeveynler',
       types: [RelationType.MOTHER, RelationType.FATHER]
     },
@@ -220,6 +224,17 @@ const FamilyTree: React.FC = () => {
       <Ionicons name="settings-outline" size={22} color="#666" />
     </TouchableOpacity>
   );
+
+  const relationTypes = [
+    { type: RelationType.MOTHER, label: relationLabels[RelationType.MOTHER] },
+    { type: RelationType.FATHER, label: relationLabels[RelationType.FATHER] },
+    { type: RelationType.SISTER, label: relationLabels[RelationType.SISTER] },
+    { type: RelationType.BROTHER, label: relationLabels[RelationType.BROTHER] },
+    { type: RelationType.SPOUSE, label: relationLabels[RelationType.SPOUSE] },
+    { type: RelationType.PARTNER, label: relationLabels[RelationType.PARTNER] },
+    { type: RelationType.FRIEND, label: relationLabels[RelationType.FRIEND] },
+    { type: RelationType.OTHER_CUSTOM, label: relationLabels[RelationType.OTHER_CUSTOM] },
+  ];
 
   if (loading) {
     return (
